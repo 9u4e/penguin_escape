@@ -85,15 +85,15 @@ function draw() {
         if(keys['ArrowUp'] && penguin.y > 0) penguin.y -= 5;
         if(keys['ArrowDown'] && penguin.y < 350) penguin.y += 5;
         
-        // Spawning
-        if(frameCount % 120 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50, hp: 2 });
+        // Spawning (Adjusted to 160 frames so they spawn less often since they move slower)
+        if(frameCount % 160 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50, hp: 2 });
 
         // Update Ice
         iceCubes.forEach((c, i) => { c.x += 10; if(c.x > 800) iceCubes.splice(i, 1); });
 
         // Update Bears
         bears.forEach((b, i) => {
-            b.x -= 2.5;
+            b.x -= 1.25; // SLOWER SPEED: 1.25 instead of 2.5
             if(b.x < 0) { 
                 bears.splice(i,1); lives--; 
                 document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
@@ -138,4 +138,3 @@ draw();
 </script>
 </body>
 </html>
-
