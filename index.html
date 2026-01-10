@@ -111,7 +111,7 @@ function draw() {
 
     // DRAWING SECTION (Always draw current positions)
     ctx.font = "50px serif";
-    let jump = isVictory ? Math.sin(frameCount * 0.075) * 50 : 0;
+    let jump = isVictory ? Math.sin(frameCount * 0.025) * 50 : 0;
     
     // Draw Penguin
     ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
@@ -138,3 +138,4 @@ draw();
 </script>
 </body>
 </html>
+
