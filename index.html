@@ -6,15 +6,16 @@
         body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 20px; }
         canvas { background: #003366; border: 5px solid #fff; border-radius: 15px; display: block; margin: 0 auto; }
         #quiz-overlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        background: white; color: black; padding: 20px; border-radius: 20px; width: 350px; border: 5px solid #3498db; }
-        button { padding: 10px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 16px; }
+                        background: white; color: black; padding: 20px; border-radius: 20px; width: 350px; border: 5px solid #3498db; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        button { padding: 10px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; }
+        .ui { font-size: 22px; margin-bottom: 10px; font-weight: bold; color: #a5d8ff; }
     </style>
 </head>
 <body>
     <h1>🐧 Penguin Escape</h1>
-    <div style="font-size: 20px; margin-bottom: 10px;">Hearts: <span id="hearts">❤️❤️❤️</span> | Score: <span id="score">0</span></div>
+    <div class="ui">Hearts: <span id="hearts">❤️❤️❤️</span> | Score: <span id="score">0</span>/10</div>
     <canvas id="gameCanvas" width="800" height="400"></canvas>
-    <div id="quiz-overlay"><p id="question"></p><div id="options"></div></div>
+    <div id="quiz-overlay"><h2 style="color:#e74c3c">GRAMMAR STOP!</h2><p id="question"></p><div id="options"></div></div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -22,52 +23,117 @@ const ctx = canvas.getContext('2d');
 let score = 0, lives = 3, gameActive = true, isVictory = false, frameCount = 0;
 let penguin = { x: 80, y: 180 }, iceCubes = [], bears = [], keys = {};
 
-const questions = [{ q: "I went out ___ it was cold.", a: ["but", "so"], correct: "but" },{ q: "Run ___ you are late.", a: ["unless", "because"], correct: "because" }];
+const questions = [
+    { q: "I wanted to go swimming, ___ it was too cold.", a: ["but", "because", "unless"], correct: "but" },
+    { q: "You won't catch the bus ___ you run faster.", a: ["since", "unless", "so"], correct: "unless" },
+    { q: "___ it was raining, we played football.", a: ["Although", "Because", "So"], correct: "Although" },
+    { q: "He studied hard, ___ he passed the exam.", a: ["but", "so", "unless"], correct: "so" },
+    { q: "I'll call you ___ I arrive at the station.", a: ["although", "when", "but"], correct: "when" },
+    { q: "We stayed home ___ the weather was terrible.", a: ["because", "but", "unless"], correct: "because" },
+    { q: "You can eat cake ___ you finish your dinner.", a: ["however", "provided that", "but"], correct: "provided that" },
+    { q: "The tea was hot, ___ I drank it slowly.", a: ["so", "although", "unless"], correct: "so" },
+    { q: "___ he is rich, he lives in a small house.", a: ["Because", "Even though", "So"], correct: "Even though" },
+    { q: "I'll help you ___ you help me first.", a: ["if", "but", "although"], correct: "if" }
+];
 
 window.addEventListener('keydown', e => keys[e.code] = true);
-window.addEventListener('keyup', e => { if(e.code === 'Space') iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20 }); keys[e.code] = false; });
+window.addEventListener('keyup', e => { 
+    if(e.code === 'Space' && gameActive && !isVictory) iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20 }); 
+    keys[e.code] = false; 
+});
 
 function draw() {
     ctx.clearRect(0, 0, 800, 400);
     frameCount++;
+
+    // 1. Only allow movement if game is active
     if(gameActive && !isVictory) {
         if(keys['ArrowUp'] && penguin.y > 0) penguin.y -= 5;
         if(keys['ArrowDown'] && penguin.y < 350) penguin.y += 5;
+        
+        // Only spawn bears when active
+        if(frameCount % 120 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50, hp: 2 });
     }
-    // Draw Penguin
-    ctx.font = "50px serif";
-    ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + (isVictory ? Math.sin(frameCount*0.1)*20 : 0) + 40);
-    if(!isVictory) ctx.fillText("😨", penguin.x + 10, penguin.y - 10);
 
-    // Draw Ice & Bears
-    iceCubes.forEach((c, i) => { c.x += 10; ctx.fillText("❄️", c.x, c.y); });
+    // 2. Draw Penguin
+    ctx.font = "50px serif";
+    let jump = isVictory ? Math.sin(frameCount * 0.075) * 50 : 0;
+    ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
+    if(!isVictory) {
+        ctx.font = "30px serif";
+        ctx.fillText("😨", penguin.x + 10, penguin.y + jump - 10);
+        ctx.fillText("💧", penguin.x + 40, penguin.y + jump - 25);
+    }
+
+    // 3. Update & Draw Ice Cubes
+    iceCubes.forEach((c, i) => { 
+        if(gameActive && !isVictory) c.x += 10; 
+        ctx.font = "30px serif";
+        ctx.fillText("❄️", c.x, c.y); 
+    });
+
+    // 4. Update & Draw Bears
     bears.forEach((b, i) => {
-        b.x -= 2; ctx.fillText("🐻‍❄️", b.x, b.y + 50);
-        if(b.x < 0) { bears.splice(i,1); lives--; document.getElementById('hearts').innerText = "❤️".repeat(lives); }
+        if(gameActive && !isVictory) b.x -= 2.5; // Bears only move if game is active
+        ctx.font = "60px serif";
+        ctx.fillText("🐻‍❄️", b.x, b.y + 50);
+        
+        if(b.x < 0) { 
+            bears.splice(i,1); 
+            lives--; 
+            document.getElementById('hearts').innerText = "❤️".repeat(lives);
+            if(lives <= 0) { alert("Game Over"); location.reload(); }
+        }
+
+        // Collision Check
         iceCubes.forEach((c, ci) => {
-            if(Math.abs(c.x - b.x) < 40 && Math.abs(c.y - b.y) < 40) {
-                bears.splice(i,1); iceCubes.splice(ci,1);
-                gameActive = false; document.getElementById('quiz-overlay').style.display = 'block';
-                let q = questions[score % questions.length];
-                document.getElementById('question').innerText = q.q;
-                document.getElementById('options').innerHTML = '';
-                q.a.forEach(opt => {
-                    let btn = document.createElement('button'); btn.innerText = opt;
-                    btn.onclick = () => {
-                        if(opt === q.correct) score++; else lives--;
-                        document.getElementById('score').innerText = score;
-                        document.getElementById('hearts').innerText = "❤️".repeat(lives);
-                        document.getElementById('quiz-overlay').style.display = 'none';
-                        if(score >= 10) isVictory = true; else gameActive = true;
-                    };
-                    document.getElementById('options').appendChild(btn);
-                });
+            if(Math.abs(c.x - b.x) < 50 && Math.abs(c.y - b.y) < 50) {
+                b.hp--;
+                iceCubes.splice(ci, 1);
+                if(b.hp <= 0) {
+                    bears.splice(i, 1);
+                    triggerQuiz();
+                }
             }
         });
     });
-    if(frameCount % 150 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50 });
-    if(lives > 0) requestAnimationFrame(draw); else alert("Game Over");
+
+    if(isVictory) {
+        ctx.fillStyle = "yellow";
+        ctx.font = "bold 50px sans-serif";
+        ctx.fillText("VICTORY!", 300, 100);
+    }
+
+    requestAnimationFrame(draw);
 }
+
+function triggerQuiz() {
+    gameActive = false; // THIS STOPS THE GAME
+    document.getElementById('quiz-overlay').style.display = 'block';
+    let q = questions[score % questions.length];
+    document.getElementById('question').innerText = q.q;
+    let optDiv = document.getElementById('options');
+    optDiv.innerHTML = '';
+    q.a.forEach(opt => {
+        let btn = document.createElement('button');
+        btn.innerText = opt;
+        btn.onclick = () => {
+            if(opt === q.correct) {
+                score++;
+                if(score >= 10) isVictory = true;
+            } else {
+                lives--;
+            }
+            document.getElementById('score').innerText = score;
+            document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
+            document.getElementById('quiz-overlay').style.display = 'none';
+            if(lives <= 0) { alert("Game Over"); location.reload(); }
+            else if(!isVictory) gameActive = true; // THIS RE-STARTS THE GAME
+        };
+        optDiv.appendChild(btn);
+    });
+}
+
 draw();
 </script>
 </body>
