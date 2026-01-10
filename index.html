@@ -1,173 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Penguin Escape: Grammar Guardian</title>
+    <title>Penguin Escape</title>
     <style>
-        body { text-align: center; background: #001b3a; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; overflow: hidden; }
-        canvas { background: #003366; border: 5px solid #ffffff; border-radius: 15px; display: block; margin: 10px auto; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 20px; }
+        canvas { background: #003366; border: 5px solid #fff; border-radius: 15px; display: block; margin: 0 auto; }
         #quiz-overlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        background: white; color: black; padding: 30px; border-radius: 20px; width: 420px; border: 6px solid #3498db; z-index: 1000; }
-        button { padding: 15px; margin: 10px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 10px; width: 100%; font-size: 18px; font-weight: bold; }
-        .ui-layer { display: flex; justify-content: space-around; max-width: 800px; margin: 0 auto; }
-        .stats { font-size: 24px; font-weight: bold; color: #a5d8ff; }
+                        background: white; color: black; padding: 20px; border-radius: 20px; width: 350px; border: 5px solid #3498db; }
+        button { padding: 10px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 16px; }
     </style>
 </head>
 <body>
-    <h1>🐧 Penguin Escape: Ocean Defender</h1>
-    <div class="ui-layer">
-        <div class="stats">Health: <span id="hearts">❤️❤️❤️</span></div>
-        <div class="stats">Grammar Power: <span id="score">0</span> / 10</div>
-    </div>
-    <canvas id="gameCanvas" width="800" height="450"></canvas>
-
-    <div id="quiz-overlay">
-        <h2 style="color:#e74c3c;">❄️ GRAMMAR CHALLENGE! ❄️</h2>
-        <p id="question" style="font-size: 20px;"></p>
-        <div id="options"></div>
-    </div>
+    <h1>🐧 Penguin Escape</h1>
+    <div style="font-size: 20px; margin-bottom: 10px;">Hearts: <span id="hearts">❤️❤️❤️</span> | Score: <span id="score">0</span></div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="quiz-overlay"><p id="question"></p><div id="options"></div></div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const heartEl = document.getElementById('hearts');
-const quizOverlay = document.getElementById('quiz-overlay');
+let score = 0, lives = 3, gameActive = true, isVictory = false, frameCount = 0;
+let penguin = { x: 80, y: 180 }, iceCubes = [], bears = [], keys = {};
 
-let score = 0;
-let lives = 3;
-let gameActive = true;
-let isVictory = false;
-let frameCount = 0;
-let penguin = { x: 80, y: 200, w: 100, h: 100, speed: 7 };
-let iceCubes = [];
-let bears = [];
-let keys = {};
-
-const questions = [
-    { q: "I wanted to go swimming, ___ it was too cold.", a: ["but", "because", "unless"], correct: "but" },
-    { q: "You won't catch the bus ___ you run faster.", a: ["since", "unless", "so"], correct: "unless" },
-    { q: "___ it was raining, we played football.", a: ["Although", "Because", "So"], correct: "Although" },
-    { q: "He studied hard, ___ he passed the exam.", a: ["but", "so", "unless"], correct: "so" },
-    { q: "I'll call you ___ I arrive at the station.", a: ["although", "when", "but"], correct: "when" },
-    { q: "We stayed home ___ the weather was terrible.", a: ["because", "but", "unless"], correct: "because" },
-    { q: "You can eat cake ___ you finish your dinner.", a: ["however", "provided that", "but"], correct: "provided that" },
-    { q: "The tea was hot, ___ I drank it slowly.", a: ["so", "although", "unless"], correct: "so" },
-    { q: "___ he is rich, he lives in a small house.", a: ["Because", "Even though", "So"], correct: "Even though" },
-    { q: "I'll help you ___ you help me first.", a: ["if", "but", "although"], correct: "if" }
-];
+const questions = [{ q: "I went out ___ it was cold.", a: ["but", "so"], correct: "but" },{ q: "Run ___ you are late.", a: ["unless", "because"], correct: "because" }];
 
 window.addEventListener('keydown', e => keys[e.code] = true);
-window.addEventListener('keyup', e => {
-    if(e.code === 'Space' && gameActive && !isVictory) iceCubes.push({ x: penguin.x + 80, y: penguin.y + 20 });
-    keys[e.code] = false;
-});
-
-function spawnBear() {
-    if(!gameActive || isVictory) return;
-    bears.push({ x: 850, y: Math.random() * 300 + 50, hp: 2, speed: 2.2 + (score * 0.15) });
-}
-setInterval(spawnBear, 2600);
-
-function updateHearts() {
-    let hStr = "";
-    for(let i=0; i<lives; i++) hStr += "❤️";
-    heartEl.innerText = hStr || "💀";
-}
-
-function checkAnswer(chosen, correct) {
-    quizOverlay.style.display = 'none';
-    if(chosen === correct) {
-        score++;
-        scoreEl.innerText = score;
-        if(score >= 10) isVictory = true;
-        else gameActive = true;
-    } else {
-        lives--;
-        updateHearts();
-        if(lives <= 0) { alert("Grammar failure! The bears win."); location.reload(); }
-        gameActive = true;
-    }
-}
+window.addEventListener('keyup', e => { if(e.code === 'Space') iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20 }); keys[e.code] = false; });
 
 function draw() {
-    ctx.clearRect(0, 0, 800, 450);
+    ctx.clearRect(0, 0, 800, 400);
     frameCount++;
-
-    let jumpY = 0;
-    if(isVictory) {
-        // Slowed down jump (0.075 instead of 0.15)
-        jumpY = Math.sin(frameCount * 0.075) * 80;
-    } else if (gameActive) {
-        if(keys['ArrowUp'] && penguin.y > 20) penguin.y -= penguin.speed;
-        if(keys['ArrowDown'] && penguin.y < 360) penguin.y += penguin.speed;
+    if(gameActive && !isVictory) {
+        if(keys['ArrowUp'] && penguin.y > 0) penguin.y -= 5;
+        if(keys['ArrowDown'] && penguin.y < 350) penguin.y += 5;
     }
+    // Draw Penguin
+    ctx.font = "50px serif";
+    ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + (isVictory ? Math.sin(frameCount*0.1)*20 : 0) + 40);
+    if(!isVictory) ctx.fillText("😨", penguin.x + 10, penguin.y - 10);
 
-    // DRAW VICTORY TEXT (STABLE)
-    if(isVictory) {
-        ctx.save();
-        ctx.fillStyle = "#ffeb3b";
-        ctx.font = "bold 50px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("VICTORY!", 400, 100); 
-        ctx.restore();
-    }
-
-    // DRAW PENGUIN
-    ctx.save();
-    let wobble = isVictory ? 0 : Math.sin(frameCount * 0.2) * 0.1;
-    // Apply jump only to the penguin's translation
-    ctx.translate(penguin.x + 50, (isVictory ? 250 : penguin.y) + jumpY + 50);
-    ctx.rotate(wobble);
-    ctx.font = "85px serif";
-    ctx.fillText("🐧", -40, 30);
-
-    // EMOTES (Only during active gameplay)
-    if(!isVictory) {
-        ctx.font = "40px serif";
-        ctx.fillText("😨", -20, -50); 
-        ctx.fillText("💧", 25, -75); 
-    }
-    ctx.restore();
-
-    // ICE CUBES
-    iceCubes.forEach((cube, ci) => {
-        cube.x += 12; ctx.font = "40px serif"; ctx.fillText("❄️", cube.x, cube.y);
-        bears.forEach((bear, bi) => {
-            if(cube.x < bear.x + 60 && cube.x + 20 > bear.x && cube.y < bear.y + 60 && cube.y + 20 > bear.y) {
-                bear.hp--; iceCubes.splice(ci, 1);
-                if(bear.hp <= 0) { 
-                    bears.splice(bi, 1); 
-                    gameActive = false; 
-                    let qData = questions[score];
-                    document.getElementById('question').innerHTML = `Fill the blank:<br><br><strong>"${qData.q}"</strong>`;
-                    let optDiv = document.getElementById('options');
-                    optDiv.innerHTML = '';
-                    qData.a.forEach(opt => {
-                        let btn = document.createElement('button');
-                        btn.innerText = opt;
-                        btn.onclick = () => checkAnswer(opt, qData.correct);
-                        optDiv.appendChild(btn);
-                    });
-                    quizOverlay.style.display = 'block';
-                }
+    // Draw Ice & Bears
+    iceCubes.forEach((c, i) => { c.x += 10; ctx.fillText("❄️", c.x, c.y); });
+    bears.forEach((b, i) => {
+        b.x -= 2; ctx.fillText("🐻‍❄️", b.x, b.y + 50);
+        if(b.x < 0) { bears.splice(i,1); lives--; document.getElementById('hearts').innerText = "❤️".repeat(lives); }
+        iceCubes.forEach((c, ci) => {
+            if(Math.abs(c.x - b.x) < 40 && Math.abs(c.y - b.y) < 40) {
+                bears.splice(i,1); iceCubes.splice(ci,1);
+                gameActive = false; document.getElementById('quiz-overlay').style.display = 'block';
+                let q = questions[score % questions.length];
+                document.getElementById('question').innerText = q.q;
+                document.getElementById('options').innerHTML = '';
+                q.a.forEach(opt => {
+                    let btn = document.createElement('button'); btn.innerText = opt;
+                    btn.onclick = () => {
+                        if(opt === q.correct) score++; else lives--;
+                        document.getElementById('score').innerText = score;
+                        document.getElementById('hearts').innerText = "❤️".repeat(lives);
+                        document.getElementById('quiz-overlay').style.display = 'none';
+                        if(score >= 10) isVictory = true; else gameActive = true;
+                    };
+                    document.getElementById('options').appendChild(btn);
+                });
             }
         });
     });
-
-    // BEARS
-    bears.forEach((bear, bi) => {
-        if(gameActive && !isVictory) bear.x -= bear.speed;
-        ctx.font = "95px serif"; ctx.fillText("🐻‍❄️", bear.x, bear.y + 70);
-        if(bear.x < 20) { 
-            bears.splice(bi, 1);
-            lives--;
-            updateHearts();
-            if(lives <= 0) { alert("Game Over! The bears got through."); location.reload(); }
-        }
-        ctx.fillStyle = "red"; ctx.fillRect(bear.x + 10, bear.y - 15, (bear.hp/2)*80, 8);
-    });
-
-    requestAnimationFrame(draw);
+    if(frameCount % 150 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50 });
+    if(lives > 0) requestAnimationFrame(draw); else alert("Game Over");
 }
 draw();
 </script>
