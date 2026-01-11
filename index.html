@@ -85,7 +85,9 @@ function triggerQuiz() {
                 location.reload();
             } else if(score >= 10) {
                 isVictory = true;
-                gameActive = false; // Stop spawning and movement
+                gameActive = false; 
+                bears = []; // CLEAR BEARS ON VICTORY
+                iceCubes = []; // CLEAR ICE ON VICTORY
             } else {
                 gameActive = true;
             }
@@ -96,9 +98,9 @@ function triggerQuiz() {
 
 function draw() {
     ctx.clearRect(0, 0, 800, 400);
+    frameCount++;
 
     if(gameActive && !isVictory) {
-        frameCount++;
         if(powerUpTimer > 0) {
             powerUpTimer--;
             document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + Math.ceil(powerUpTimer / 60) + "s ⚡";
@@ -141,8 +143,10 @@ function draw() {
 
     // DRAWING
     ctx.font = "50px serif";
+    // Using Date.now for victory jump ensures it keeps moving even when frameCount stops
     let jump = isVictory ? Math.sin(Date.now() * 0.005) * 50 : 0;
     ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
+    
     if(!isVictory) {
         ctx.font = "30px serif";
         ctx.fillText("😨", penguin.x + 10, penguin.y + jump - 10);
@@ -159,8 +163,10 @@ function draw() {
     });
 
     if(isVictory) {
-        ctx.fillStyle = "#f1c40f"; ctx.font = "bold 60px sans-serif";
-        ctx.fillText("VICTORY!", 280, 200);
+        ctx.fillStyle = "#f1c40f"; 
+        ctx.font = "bold 60px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("VICTORY!", 400, 200);
         document.getElementById('streak-info').innerText = "YOU MASTERED GRAMMAR!";
     }
     requestAnimationFrame(draw);
