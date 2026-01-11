@@ -27,9 +27,8 @@ const ctx = canvas.getContext('2d');
 let score = 0, lives = 3, streak = 0, gameActive = true, isVictory = false, frameCount = 0;
 let penguin = { x: 80, y: 180 }, iceCubes = [], bears = [], keys = {};
 
-// Power-up Timer variables
-let powerUpTimer = 0; // Frames remaining (60 frames = 1 second)
-const POWER_UP_DURATION = 600; // 10 seconds at 60fps
+let powerUpTimer = 0; 
+const POWER_UP_DURATION = 600; 
 
 const questions = [
     { q: "I wanted to go swimming, ___ it was too cold.", a: ["but", "because", "unless"], correct: "but" },
@@ -68,14 +67,14 @@ function triggerQuiz() {
             if(opt === q.correct) {
                 score++;
                 streak++;
-                if(streak === 3) {
-                    powerUpTimer = POWER_UP_DURATION; // Activate 10s timer
-                    streak = 0; // Reset streak so they can earn it again
+                if(streak >= 3) {
+                    powerUpTimer = POWER_UP_DURATION;
+                    streak = 0;
                 }
             } else {
                 lives--;
                 streak = 0;
-                powerUpTimer = 0; // Lose power-up on wrong answer
+                powerUpTimer = 0;
             }
             document.getElementById('score').innerText = score;
             document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
@@ -93,29 +92,30 @@ function draw() {
     if(gameActive && !isVictory) {
         frameCount++;
         
-        // Handle Power-up Timer
         if(powerUpTimer > 0) {
             powerUpTimer--;
-            let timeLeft = Math.ceil(powerUpTimer / 60);
-            document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + timeLeft + "s ⚡";
+            document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + Math.ceil(powerUpTimer / 60) + "s ⚡";
         } else {
             document.getElementById('streak-info').innerText = "Streak: " + streak;
         }
 
         if(keys['ArrowUp'] && penguin.y > 0) penguin.y -= 5;
         if(keys['ArrowDown'] && penguin.y < 350) penguin.y += 5;
-        if(frameCount % 150 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50, startY: 0 });
+        if(frameCount % 150 === 0) {
+            let startY = Math.random() * 300 + 50;
+            bears.push({ x: 850, y: startY, baseLineY: startY, offset: Math.random() * 100 });
+        }
 
         iceCubes.forEach((c, i) => { c.x += 10; if(c.x > 800) iceCubes.splice(i, 1); });
 
         bears.forEach((b, i) => {
             if (powerUpTimer > 0) {
-                b.x -= 0.5; // Slow
-                // Vertical wave movement
-                if(!b.offset) b.offset = Math.random() * 100;
-                b.y += Math.sin((frameCount + b.offset) * 0.05) * 3;
+                b.x -= 0.5; // 50% slower than 1.0
+                // Wavy movement: move up and down from the baseline
+                b.y = b.baseLineY + Math.sin((frameCount + b.offset) * 0.05) * 60;
             } else {
-                b.x -= 1.0; // Normal slow
+                b.x -= 1.0; 
+                b.y = b.baseLineY; // Return to straight line if power-up ends
             }
 
             if(b.x < 0) { 
@@ -147,7 +147,10 @@ function draw() {
         ctx.fillText("❄️", c.x, c.y); 
     });
 
-    bears.forEach(b => { ctx.font = "60px serif"; ctx.fillText("🐻‍CV", b.x, b.y + 50); });
+    bears.forEach(b => { 
+        ctx.font = "60px serif"; 
+        ctx.fillText("🐻‍❄️", b.x, b.y + 50); 
+    });
 
     if(isVictory) {
         ctx.fillStyle = "yellow"; ctx.font = "bold 50px sans-serif";
