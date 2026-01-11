@@ -4,46 +4,61 @@
     <title>Penguin Escape: Mobile Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 10px; overflow: hidden; touch-action: none; }
-        canvas { background: #003366; border: 3px solid #fff; border-radius: 15px; display: block; margin: 0 auto; max-width: 100%; height: auto; }
-        #quiz-overlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        background: white; color: black; padding: 20px; border-radius: 20px; width: 80%; max-width: 350px; border: 5px solid #3498db; z-index: 100; }
-        button { padding: 15px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 18px; font-weight: bold; }
-        .ui { font-size: 18px; margin-bottom: 5px; font-weight: bold; color: #a5d8ff; }
-        #streak-info { color: #f1c40f; font-size: 16px; height: 20px; }
+        body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 0; overflow: hidden; touch-action: none; }
+        canvas { background: #003366; border-bottom: 3px solid #fff; display: block; margin: 0 auto; width: 100vw; height: 50vh; object-fit: contain; }
         
-        /* Mobile Control Buttons */
-        .controls { display: flex; justify-content: space-between; padding: 10px; max-width: 800px; margin: 0 auto; }
-        .btn-circle { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border: 2px solid white; border-radius: 50%; 
-                      display: flex; align-items: center; justify-content: center; font-size: 30px; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .btn-circle:active { background: rgba(255,255,255,0.5); }
+        /* Stats Bar */
+        .ui-bar { background: #001b3a; padding: 10px; font-size: 18px; font-weight: bold; }
+        #streak-info { color: #f1c40f; font-size: 14px; margin-top: 5px; height: 18px; }
+
+        /* QUIZ OVERLAY */
+        #quiz-overlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                        background: white; color: black; padding: 20px; border-radius: 20px; width: 85%; max-width: 350px; border: 5px solid #3498db; z-index: 1000; }
+        .quiz-btn { padding: 12px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; }
+
+        /* VIRTUAL CONTROLS */
+        .controller { position: absolute; bottom: 20px; left: 0; right: 0; height: 150px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; pointer-events: none; }
+        .d-pad, .fire-zone { pointer-events: auto; }
+        
+        .arrow-btn { width: 70px; height: 70px; background: rgba(255,255,255,0.1); border: 3px solid white; border-radius: 15px; margin: 5px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+        
+        /* BIG RED DOT */
+        .red-dot { width: 100px; height: 100px; background: #e74c3c; border: 5px solid #c0392b; border-radius: 50%; box-shadow: 0 5px #962d22, 0 10px 20px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 20px; }
+        .red-dot:active { transform: translateY(4px); box-shadow: 0 2px #962d22; }
     </style>
 </head>
 <body>
-    <div class="ui">
+
+    <div class="ui-bar">
         ❤️ <span id="hearts">❤️❤️❤️</span> | ⭐ <span id="score">0</span>/10
         <div id="streak-info">Streak: 0</div>
     </div>
     
     <canvas id="gameCanvas" width="800" height="400"></canvas>
 
-    <div class="controls">
-        <div style="display:flex; gap:10px;">
-            <div class="btn-circle" id="btnUp">🔼</div>
-            <div class="btn-circle" id="btnDown">🔽</div>
+    <div class="controller">
+        <div class="d-pad">
+            <div class="arrow-btn" id="btnUp">🔼</div>
+            <div class="arrow-btn" id="btnDown">🔽</div>
         </div>
-        <div class="btn-circle" id="btnFire" style="background: rgba(52, 152, 219, 0.4);">❄️</div>
+        <div class="fire-zone">
+            <div class="red-dot" id="btnFire">FIRE</div>
+        </div>
     </div>
 
-    <div id="quiz-overlay"><h2 style="color:#e74c3c">GRAMMAR STOP!</h2><p id="question"></p><div id="options"></div></div>
+    <div id="quiz-overlay">
+        <h2 style="color:#e74c3c; margin-top:0;">GRAMMAR STOP!</h2>
+        <p id="question" style="font-weight:bold;"></p>
+        <div id="options"></div>
+    </div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let score = 0, lives = 3, streak = 0, gameActive = true, isVictory = false, frameCount = 0;
 let penguin = { x: 80, y: 180 }, iceCubes = [], bears = [], keys = {};
-let powerUpTimer = 0; 
-const POWER_UP_DURATION = 600; 
+let powerUpTimer = 0;
+const POWER_UP_DURATION = 600;
 
 const questions = [
     { q: "I wanted to go swimming, ___ it was too cold.", a: ["but", "because", "unless"], correct: "but" },
@@ -58,27 +73,23 @@ const questions = [
     { q: "I'll help you ___ you help me first.", a: ["if", "but", "although"], correct: "if" }
 ];
 
-// KEYBOARD INPUT
+// INPUT HANDLING
 window.addEventListener('keydown', e => keys[e.code] = true);
-window.addEventListener('keyup', e => { 
-    if(e.code === 'Space') fireIce();
-    keys[e.code] = false; 
-});
+window.addEventListener('keyup', e => { if(e.code === 'Space') fire(); keys[e.code] = false; });
 
-// TOUCH INPUT
-function setupTouch(id, key) {
-    const btn = document.getElementById(id);
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+function bindTouch(id, key) {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
 }
-setupTouch('btnUp', 'ArrowUp');
-setupTouch('btnDown', 'ArrowDown');
-document.getElementById('btnFire').addEventListener('touchstart', (e) => { e.preventDefault(); fireIce(); });
+bindTouch('btnUp', 'ArrowUp');
+bindTouch('btnDown', 'ArrowDown');
+document.getElementById('btnFire').addEventListener('touchstart', (e) => { e.preventDefault(); fire(); });
 
-function fireIce() {
+function fire() {
     if(gameActive && !isVictory) {
-        let currentSize = (powerUpTimer > 0) ? 120 : 30;
-        iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20, size: currentSize });
+        let size = (powerUpTimer > 0) ? 120 : 30;
+        iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20, size: size });
     }
 }
 
@@ -92,11 +103,11 @@ function triggerQuiz() {
     
     q.a.forEach(opt => {
         let btn = document.createElement('button');
+        btn.className = 'quiz-btn';
         btn.innerText = opt;
         btn.onclick = () => {
             if(opt === q.correct) {
-                score++;
-                streak++;
+                score++; streak++;
                 if(streak >= 3) { powerUpTimer = POWER_UP_DURATION; streak = 0; }
             } else {
                 lives--; streak = 0; powerUpTimer = 0;
@@ -119,7 +130,7 @@ function draw() {
         frameCount++;
         if(powerUpTimer > 0) {
             powerUpTimer--;
-            document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + Math.ceil(powerUpTimer / 60) + "s ⚡";
+            document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + Math.ceil(powerUpTimer/60) + "s ⚡";
         } else {
             document.getElementById('streak-info').innerText = "Streak: " + streak;
         }
@@ -134,8 +145,8 @@ function draw() {
         iceCubes.forEach((c, i) => { c.x += 10; if(c.x > 800) iceCubes.splice(i, 1); });
 
         bears.forEach((b, i) => {
-            let bearSpeed = (powerUpTimer > 0) ? 0.5 : 1.0;
-            b.x -= bearSpeed;
+            let speed = (powerUpTimer > 0) ? 0.5 : 1.0;
+            b.x -= speed;
             b.y = (powerUpTimer > 0) ? b.baseLineY + Math.sin((frameCount + b.offset) * 0.05) * 60 : b.baseLineY;
 
             if(b.x < 0) { 
@@ -143,16 +154,16 @@ function draw() {
                 document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
                 if(lives <= 0) { alert("Game Over!"); location.reload(); }
             }
-
             iceCubes.forEach((c, ci) => {
-                let hitDist = (powerUpTimer > 0) ? 80 : 50;
-                if(Math.abs(c.x - b.x) < hitDist && Math.abs(c.y - b.y) < hitDist) {
-                    bears.splice(i, 1); iceCubes.splice(ci, 1); triggerQuiz();
+                let hit = (powerUpTimer > 0) ? 80 : 50;
+                if(Math.abs(c.x-b.x) < hit && Math.abs(c.y-b.y) < hit) {
+                    bears.splice(i,1); iceCubes.splice(ci,1); triggerQuiz();
                 }
             });
         });
     }
 
+    // DRAW CHARACTERS
     ctx.font = "50px serif";
     let jump = isVictory ? Math.sin(Date.now() * 0.005) * 50 : 0;
     ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
@@ -162,9 +173,7 @@ function draw() {
 
     if(isVictory) {
         ctx.fillStyle = "#f1c40f"; ctx.font = "bold 60px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("VICTORY!", 400, 200);
-        document.getElementById('streak-info').innerText = "YOU MASTERED GRAMMAR!";
+        ctx.textAlign = "center"; ctx.fillText("VICTORY!", 400, 200);
     }
     requestAnimationFrame(draw);
 }
