@@ -1,24 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Penguin Escape: Final Build</title>
+    <title>Penguin Escape: Mobile Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 20px; overflow: hidden; }
-        canvas { background: #003366; border: 5px solid #fff; border-radius: 15px; display: block; margin: 0 auto; box-shadow: 0 0 20px #000; }
+        body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 10px; overflow: hidden; touch-action: none; }
+        canvas { background: #003366; border: 3px solid #fff; border-radius: 15px; display: block; margin: 0 auto; max-width: 100%; height: auto; }
         #quiz-overlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        background: white; color: black; padding: 20px; border-radius: 20px; width: 350px; border: 5px solid #3498db; }
-        button { padding: 10px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; }
-        .ui { font-size: 22px; margin-bottom: 10px; font-weight: bold; color: #a5d8ff; }
-        #streak-info { color: #f1c40f; font-size: 18px; height: 25px; margin-top: 5px; }
+                        background: white; color: black; padding: 20px; border-radius: 20px; width: 80%; max-width: 350px; border: 5px solid #3498db; z-index: 100; }
+        button { padding: 15px; margin: 5px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 8px; width: 100%; font-size: 18px; font-weight: bold; }
+        .ui { font-size: 18px; margin-bottom: 5px; font-weight: bold; color: #a5d8ff; }
+        #streak-info { color: #f1c40f; font-size: 16px; height: 20px; }
+        
+        /* Mobile Control Buttons */
+        .controls { display: flex; justify-content: space-between; padding: 10px; max-width: 800px; margin: 0 auto; }
+        .btn-circle { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border: 2px solid white; border-radius: 50%; 
+                      display: flex; align-items: center; justify-content: center; font-size: 30px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .btn-circle:active { background: rgba(255,255,255,0.5); }
     </style>
 </head>
 <body>
-    <h1>🐧 Penguin Escape</h1>
     <div class="ui">
-        Hearts: <span id="hearts">❤️❤️❤️</span> | Score: <span id="score">0</span>/10
+        ❤️ <span id="hearts">❤️❤️❤️</span> | ⭐ <span id="score">0</span>/10
         <div id="streak-info">Streak: 0</div>
     </div>
+    
     <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <div class="controls">
+        <div style="display:flex; gap:10px;">
+            <div class="btn-circle" id="btnUp">🔼</div>
+            <div class="btn-circle" id="btnDown">🔽</div>
+        </div>
+        <div class="btn-circle" id="btnFire" style="background: rgba(52, 152, 219, 0.4);">❄️</div>
+    </div>
+
     <div id="quiz-overlay"><h2 style="color:#e74c3c">GRAMMAR STOP!</h2><p id="question"></p><div id="options"></div></div>
 
 <script>
@@ -42,14 +58,29 @@ const questions = [
     { q: "I'll help you ___ you help me first.", a: ["if", "but", "although"], correct: "if" }
 ];
 
+// KEYBOARD INPUT
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => { 
-    if(e.code === 'Space' && gameActive && !isVictory) {
+    if(e.code === 'Space') fireIce();
+    keys[e.code] = false; 
+});
+
+// TOUCH INPUT
+function setupTouch(id, key) {
+    const btn = document.getElementById(id);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+}
+setupTouch('btnUp', 'ArrowUp');
+setupTouch('btnDown', 'ArrowDown');
+document.getElementById('btnFire').addEventListener('touchstart', (e) => { e.preventDefault(); fireIce(); });
+
+function fireIce() {
+    if(gameActive && !isVictory) {
         let currentSize = (powerUpTimer > 0) ? 120 : 30;
         iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20, size: currentSize });
     }
-    keys[e.code] = false; 
-});
+}
 
 function triggerQuiz() {
     gameActive = false;
@@ -66,31 +97,16 @@ function triggerQuiz() {
             if(opt === q.correct) {
                 score++;
                 streak++;
-                if(streak >= 3) {
-                    powerUpTimer = POWER_UP_DURATION;
-                    streak = 0;
-                }
+                if(streak >= 3) { powerUpTimer = POWER_UP_DURATION; streak = 0; }
             } else {
-                lives--;
-                streak = 0;
-                powerUpTimer = 0;
+                lives--; streak = 0; powerUpTimer = 0;
             }
-            
             document.getElementById('score').innerText = score;
             document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
             document.getElementById('quiz-overlay').style.display = 'none';
-            
-            if(lives <= 0) {
-                alert("Game Over! Try again.");
-                location.reload();
-            } else if(score >= 10) {
-                isVictory = true;
-                gameActive = false; 
-                bears = []; // CLEAR BEARS ON VICTORY
-                iceCubes = []; // CLEAR ICE ON VICTORY
-            } else {
-                gameActive = true;
-            }
+            if(lives <= 0) { alert("Game Over!"); location.reload(); }
+            else if(score >= 10) { isVictory = true; gameActive = false; }
+            else { gameActive = true; }
         };
         optDiv.appendChild(btn);
     });
@@ -98,9 +114,9 @@ function triggerQuiz() {
 
 function draw() {
     ctx.clearRect(0, 0, 800, 400);
-    frameCount++;
 
     if(gameActive && !isVictory) {
+        frameCount++;
         if(powerUpTimer > 0) {
             powerUpTimer--;
             document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + Math.ceil(powerUpTimer / 60) + "s ⚡";
@@ -120,16 +136,12 @@ function draw() {
         bears.forEach((b, i) => {
             let bearSpeed = (powerUpTimer > 0) ? 0.5 : 1.0;
             b.x -= bearSpeed;
-            if (powerUpTimer > 0) {
-                b.y = b.baseLineY + Math.sin((frameCount + b.offset) * 0.05) * 60;
-            } else {
-                b.y = b.baseLineY;
-            }
+            b.y = (powerUpTimer > 0) ? b.baseLineY + Math.sin((frameCount + b.offset) * 0.05) * 60 : b.baseLineY;
 
             if(b.x < 0) { 
                 bears.splice(i,1); lives--; streak = 0; powerUpTimer = 0;
                 document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
-                if(lives <= 0) { alert("Game Over"); location.reload(); }
+                if(lives <= 0) { alert("Game Over!"); location.reload(); }
             }
 
             iceCubes.forEach((c, ci) => {
@@ -141,30 +153,15 @@ function draw() {
         });
     }
 
-    // DRAWING
     ctx.font = "50px serif";
-    // Using Date.now for victory jump ensures it keeps moving even when frameCount stops
     let jump = isVictory ? Math.sin(Date.now() * 0.005) * 50 : 0;
     ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
-    
-    if(!isVictory) {
-        ctx.font = "30px serif";
-        ctx.fillText("😨", penguin.x + 10, penguin.y + jump - 10);
-    }
-    
-    iceCubes.forEach(c => { 
-        ctx.font = c.size + "px serif"; 
-        ctx.fillText("❄️", c.x, c.y); 
-    });
-
-    bears.forEach(b => { 
-        ctx.font = "60px serif"; 
-        ctx.fillText("🐻‍❄️", b.x, b.y + 50); 
-    });
+    if(!isVictory) { ctx.font = "30px serif"; ctx.fillText("😨", penguin.x + 10, penguin.y + jump - 10); }
+    iceCubes.forEach(c => { ctx.font = c.size + "px serif"; ctx.fillText("❄️", c.x, c.y); });
+    bears.forEach(b => { ctx.font = "60px serif"; ctx.fillText("🐻‍❄️", b.x, b.y + 50); });
 
     if(isVictory) {
-        ctx.fillStyle = "#f1c40f"; 
-        ctx.font = "bold 60px sans-serif";
+        ctx.fillStyle = "#f1c40f"; ctx.font = "bold 60px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("VICTORY!", 400, 200);
         document.getElementById('streak-info').innerText = "YOU MASTERED GRAMMAR!";
