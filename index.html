@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Penguin Escape: Mega Wave Edition</title>
+    <title>Penguin Escape: Final Build</title>
     <style>
         body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 20px; overflow: hidden; }
         canvas { background: #003366; border: 5px solid #fff; border-radius: 15px; display: block; margin: 0 auto; box-shadow: 0 0 20px #000; }
@@ -26,7 +26,6 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let score = 0, lives = 3, streak = 0, gameActive = true, isVictory = false, frameCount = 0;
 let penguin = { x: 80, y: 180 }, iceCubes = [], bears = [], keys = {};
-
 let powerUpTimer = 0; 
 const POWER_UP_DURATION = 600; 
 
@@ -46,8 +45,8 @@ const questions = [
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => { 
     if(e.code === 'Space' && gameActive && !isVictory) {
-        let size = (powerUpTimer > 0) ? 120 : 30;
-        iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20, size: size });
+        let currentSize = (powerUpTimer > 0) ? 120 : 30;
+        iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20, size: currentSize });
     }
     keys[e.code] = false; 
 });
@@ -76,11 +75,20 @@ function triggerQuiz() {
                 streak = 0;
                 powerUpTimer = 0;
             }
+            
             document.getElementById('score').innerText = score;
             document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
             document.getElementById('quiz-overlay').style.display = 'none';
-            if(lives <= 0) { alert("Game Over"); location.reload(); }
-            else if(!isVictory) gameActive = true;
+            
+            if(lives <= 0) {
+                alert("Game Over! Try again.");
+                location.reload();
+            } else if(score >= 10) {
+                isVictory = true;
+                gameActive = false; // Stop spawning and movement
+            } else {
+                gameActive = true;
+            }
         };
         optDiv.appendChild(btn);
     });
@@ -91,7 +99,6 @@ function draw() {
 
     if(gameActive && !isVictory) {
         frameCount++;
-        
         if(powerUpTimer > 0) {
             powerUpTimer--;
             document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + Math.ceil(powerUpTimer / 60) + "s ⚡";
@@ -102,20 +109,19 @@ function draw() {
         if(keys['ArrowUp'] && penguin.y > 0) penguin.y -= 5;
         if(keys['ArrowDown'] && penguin.y < 350) penguin.y += 5;
         if(frameCount % 150 === 0) {
-            let startY = Math.random() * 300 + 50;
-            bears.push({ x: 850, y: startY, baseLineY: startY, offset: Math.random() * 100 });
+            let sy = Math.random() * 300 + 50;
+            bears.push({ x: 850, y: sy, baseLineY: sy, offset: Math.random() * 100, hp: 2 });
         }
 
         iceCubes.forEach((c, i) => { c.x += 10; if(c.x > 800) iceCubes.splice(i, 1); });
 
         bears.forEach((b, i) => {
+            let bearSpeed = (powerUpTimer > 0) ? 0.5 : 1.0;
+            b.x -= bearSpeed;
             if (powerUpTimer > 0) {
-                b.x -= 0.5; // 50% slower than 1.0
-                // Wavy movement: move up and down from the baseline
                 b.y = b.baseLineY + Math.sin((frameCount + b.offset) * 0.05) * 60;
             } else {
-                b.x -= 1.0; 
-                b.y = b.baseLineY; // Return to straight line if power-up ends
+                b.y = b.baseLineY;
             }
 
             if(b.x < 0) { 
@@ -135,7 +141,7 @@ function draw() {
 
     // DRAWING
     ctx.font = "50px serif";
-    let jump = isVictory ? Math.sin(frameCount * 0.075) * 50 : 0;
+    let jump = isVictory ? Math.sin(Date.now() * 0.005) * 50 : 0;
     ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
     if(!isVictory) {
         ctx.font = "30px serif";
@@ -153,8 +159,9 @@ function draw() {
     });
 
     if(isVictory) {
-        ctx.fillStyle = "yellow"; ctx.font = "bold 50px sans-serif";
-        ctx.fillText("VICTORY!", 300, 100);
+        ctx.fillStyle = "#f1c40f"; ctx.font = "bold 60px sans-serif";
+        ctx.fillText("VICTORY!", 280, 200);
+        document.getElementById('streak-info').innerText = "YOU MASTERED GRAMMAR!";
     }
     requestAnimationFrame(draw);
 }
