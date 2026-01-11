@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Penguin Escape: Power-Up Edition</title>
+    <title>Penguin Escape: Mega Wave Edition</title>
     <style>
         body { text-align: center; background: #001b3a; color: white; font-family: sans-serif; margin: 0; padding: 20px; overflow: hidden; }
         canvas { background: #003366; border: 5px solid #fff; border-radius: 15px; display: block; margin: 0 auto; box-shadow: 0 0 20px #000; }
@@ -27,6 +27,10 @@ const ctx = canvas.getContext('2d');
 let score = 0, lives = 3, streak = 0, gameActive = true, isVictory = false, frameCount = 0;
 let penguin = { x: 80, y: 180 }, iceCubes = [], bears = [], keys = {};
 
+// Power-up Timer variables
+let powerUpTimer = 0; // Frames remaining (60 frames = 1 second)
+const POWER_UP_DURATION = 600; // 10 seconds at 60fps
+
 const questions = [
     { q: "I wanted to go swimming, ___ it was too cold.", a: ["but", "because", "unless"], correct: "but" },
     { q: "You won't catch the bus ___ you run faster.", a: ["since", "unless", "so"], correct: "unless" },
@@ -43,8 +47,7 @@ const questions = [
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => { 
     if(e.code === 'Space' && gameActive && !isVictory) {
-        // Power-up logic for ice size (4x bigger = 120px)
-        let size = (streak >= 3) ? 120 : 30;
+        let size = (powerUpTimer > 0) ? 120 : 30;
         iceCubes.push({ x: penguin.x + 50, y: penguin.y + 20, size: size });
     }
     keys[e.code] = false; 
@@ -65,13 +68,14 @@ function triggerQuiz() {
             if(opt === q.correct) {
                 score++;
                 streak++;
-                if(streak >= 3) document.getElementById('streak-info').innerText = "⚡ MEGA ICE ACTIVE! ⚡";
-                else document.getElementById('streak-info').innerText = "Streak: " + streak;
-                if(score >= 10) isVictory = true;
+                if(streak === 3) {
+                    powerUpTimer = POWER_UP_DURATION; // Activate 10s timer
+                    streak = 0; // Reset streak so they can earn it again
+                }
             } else {
                 lives--;
-                streak = 0; // Reset streak on wrong answer
-                document.getElementById('streak-info').innerText = "Streak: 0";
+                streak = 0;
+                powerUpTimer = 0; // Lose power-up on wrong answer
             }
             document.getElementById('score').innerText = score;
             document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
@@ -88,26 +92,40 @@ function draw() {
 
     if(gameActive && !isVictory) {
         frameCount++;
+        
+        // Handle Power-up Timer
+        if(powerUpTimer > 0) {
+            powerUpTimer--;
+            let timeLeft = Math.ceil(powerUpTimer / 60);
+            document.getElementById('streak-info').innerText = "⚡ MEGA ICE: " + timeLeft + "s ⚡";
+        } else {
+            document.getElementById('streak-info').innerText = "Streak: " + streak;
+        }
+
         if(keys['ArrowUp'] && penguin.y > 0) penguin.y -= 5;
         if(keys['ArrowDown'] && penguin.y < 350) penguin.y += 5;
-        if(frameCount % 150 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50 });
+        if(frameCount % 150 === 0) bears.push({ x: 850, y: Math.random() * 300 + 50, startY: 0 });
 
         iceCubes.forEach((c, i) => { c.x += 10; if(c.x > 800) iceCubes.splice(i, 1); });
 
         bears.forEach((b, i) => {
-            // Power-up logic for bear speed (50% slower = 0.5)
-            let bearSpeed = (streak >= 3) ? 0.5 : 1.0;
-            b.x -= bearSpeed;
+            if (powerUpTimer > 0) {
+                b.x -= 0.5; // Slow
+                // Vertical wave movement
+                if(!b.offset) b.offset = Math.random() * 100;
+                b.y += Math.sin((frameCount + b.offset) * 0.05) * 3;
+            } else {
+                b.x -= 1.0; // Normal slow
+            }
 
             if(b.x < 0) { 
-                bears.splice(i,1); lives--; streak = 0;
-                document.getElementById('streak-info').innerText = "Streak: 0";
+                bears.splice(i,1); lives--; streak = 0; powerUpTimer = 0;
                 document.getElementById('hearts').innerText = "❤️".repeat(Math.max(0, lives));
                 if(lives <= 0) { alert("Game Over"); location.reload(); }
             }
 
             iceCubes.forEach((c, ci) => {
-                let hitDist = (streak >= 3) ? 80 : 50; // Larger hit area for large ice
+                let hitDist = (powerUpTimer > 0) ? 80 : 50;
                 if(Math.abs(c.x - b.x) < hitDist && Math.abs(c.y - b.y) < hitDist) {
                     bears.splice(i, 1); iceCubes.splice(ci, 1); triggerQuiz();
                 }
@@ -115,6 +133,7 @@ function draw() {
         });
     }
 
+    // DRAWING
     ctx.font = "50px serif";
     let jump = isVictory ? Math.sin(frameCount * 0.075) * 50 : 0;
     ctx.fillText(isVictory ? "🥳" : "🐧", penguin.x, penguin.y + jump + 40);
@@ -128,7 +147,7 @@ function draw() {
         ctx.fillText("❄️", c.x, c.y); 
     });
 
-    bears.forEach(b => { ctx.font = "60px serif"; ctx.fillText("🐻‍❄️", b.x, b.y + 50); });
+    bears.forEach(b => { ctx.font = "60px serif"; ctx.fillText("🐻‍CV", b.x, b.y + 50); });
 
     if(isVictory) {
         ctx.fillStyle = "yellow"; ctx.font = "bold 50px sans-serif";
